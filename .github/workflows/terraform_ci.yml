@@ -51,4 +51,5 @@ jobs:
         env:
           DD_API_KEY: ${{ secrets.DD_API_KEY }}
           DD_APP_KEY: ${{ secrets.DD_APP_KEY }}
+          TF_VAR_datadog_api_key: ${{ secrets.DD_API_KEY }}
         run: terraform plan

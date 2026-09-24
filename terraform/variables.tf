@@ -9,3 +9,9 @@ variable "aws_account_id" {
   type        = string
   default     = "867041163196"
 }
+
+variable "datadog_api_key" {
+  description = "Datadog API key used by the Datadog Forwarder"
+  type        = string
+  sensitive   = true
+}
