@@ -35,6 +35,27 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
+      - name: Import existing bootstrap resources
+        shell: bash
+        run: |
+          set -e
+
+          OIDC_PROVIDER_ARN=$(aws iam list-open-id-connect-providers \
+            --query "OpenIDConnectProviderList[?ends_with(Arn, 'token.actions.githubusercontent.com')].Arn | [0]" \
+            --output text)
+
+          if ! terraform state list | grep -q '^aws_iam_openid_connect_provider.github$'; then
+            if [ -n "$OIDC_PROVIDER_ARN" ] && [ "$OIDC_PROVIDER_ARN" != "None" ]; then
+              echo "Importing existing GitHub OIDC provider..."
+              terraform import aws_iam_openid_connect_provider.github "$OIDC_PROVIDER_ARN"
+            fi
+          fi
+
+          if ! terraform state list | grep -q '^aws_s3_bucket.terraform_state$'; then
+            echo "Importing existing Terraform state bucket..."
+            terraform import aws_s3_bucket.terraform_state "datadog-terraform-oac-867041163196"
+          fi
+
       - name: Terraform Format Check
         run: terraform fmt -check
 
