@@ -48,4 +48,7 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
+        env:
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+          DD_APP_KEY: ${{ secrets.DD_APP_KEY }}
         run: terraform plan
