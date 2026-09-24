@@ -2,6 +2,10 @@ data "aws_caller_identity" "current" {}
 
 data "aws_partition" "current" {}
 
+# ------------------------------------------------------------
+# GitHub Actions OIDC Provider
+# ------------------------------------------------------------
+
 resource "aws_iam_openid_connect_provider" "github" {
   url = "https://token.actions.githubusercontent.com"
 
@@ -13,8 +17,13 @@ resource "aws_iam_openid_connect_provider" "github" {
     Name        = "GitHub-Actions-OIDC"
     Project     = "Datadog-Terraform-OAC"
     Environment = "prod"
+    ManagedBy   = "Terraform"
   }
 }
+
+# ------------------------------------------------------------
+# GitHub Actions -> AWS Trust Policy
+# ------------------------------------------------------------
 
 data "aws_iam_policy_document" "github_actions_assume_role" {
   statement {
@@ -32,6 +41,7 @@ data "aws_iam_policy_document" "github_actions_assume_role" {
       "sts:AssumeRoleWithWebIdentity"
     ]
 
+    # GitHub Actions audience
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:aud"
@@ -41,16 +51,30 @@ data "aws_iam_policy_document" "github_actions_assume_role" {
       ]
     }
 
+    # Restrict access to this exact repository and main branch.
+    #
+    # Repository:
+    # rohanbhowmik2022/Datadog_Terraform_OAC
+    #
+    # Owner ID:
+    # 109950268
+    #
+    # Repository ID:
+    # 1383512990
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
 
       values = [
-        "repo:${var.github_repository}:ref:refs/heads/${var.github_branch}"
+        "repo:rohanbhowmik2022@109950268/Datadog_Terraform_OAC@1383512990:ref:refs/heads/main"
       ]
     }
   }
 }
+
+# ------------------------------------------------------------
+# Terraform Deployment Role
+# ------------------------------------------------------------
 
 resource "aws_iam_role" "terraform_deployment" {
   name = var.terraform_role_name
@@ -65,6 +89,15 @@ resource "aws_iam_role" "terraform_deployment" {
     ManagedBy   = "Terraform"
   }
 }
+
+# ------------------------------------------------------------
+# Terraform Deployment Permissions
+#
+# NOTE:
+# This is the initial bootstrap policy.
+# We will reduce this to least privilege after the
+# observability resources are established.
+# ------------------------------------------------------------
 
 data "aws_iam_policy_document" "terraform_deployment" {
   statement {
@@ -95,6 +128,10 @@ resource "aws_iam_role_policy" "terraform_deployment" {
   policy = data.aws_iam_policy_document.terraform_deployment.json
 }
 
+# ------------------------------------------------------------
+# Terraform Remote State S3 Bucket
+# ------------------------------------------------------------
+
 resource "aws_s3_bucket" "terraform_state" {
   bucket = var.terraform_state_bucket
 
@@ -102,8 +139,13 @@ resource "aws_s3_bucket" "terraform_state" {
     Name        = "Terraform State"
     Project     = "Datadog-Terraform-OAC"
     Environment = "prod"
+    ManagedBy   = "Terraform"
   }
 }
+
+# ------------------------------------------------------------
+# S3 Versioning
+# ------------------------------------------------------------
 
 resource "aws_s3_bucket_versioning" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
@@ -112,6 +154,10 @@ resource "aws_s3_bucket_versioning" "terraform_state" {
     status = "Enabled"
   }
 }
+
+# ------------------------------------------------------------
+# S3 Server-Side Encryption
+# ------------------------------------------------------------
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
@@ -122,6 +168,10 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" 
     }
   }
 }
+
+# ------------------------------------------------------------
+# S3 Public Access Protection
+# ------------------------------------------------------------
 
 resource "aws_s3_bucket_public_access_block" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
