@@ -1,7 +1,7 @@
 locals {
-  project = "datadog-terraform-oac"
+  project     = "datadog-terraform-oac"
   environment = "var.environment"
-  region = "var.aws_region"
+  region      = "var.aws_region"
 }
 
 # common_tags = {
