@@ -180,7 +180,11 @@ resource "datadog_integration_aws_account" "datadog" {
   }
 
   logs_config {
-    lambda_forwarder {}
+    lambda_forwarder {
+      lambdas = [
+        module.datadog_log_forwarder.datadog_forwarder_arn
+      ]
+    }
   }
 
   metrics_config {
